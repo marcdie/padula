@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Immobili Padula</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Immobili Padula">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { Home, Users, CreditCard, Receipt, BarChart3, Plus, X, Edit2, Save, AlertCircle, Calendar, Euro } = lucide;
+
+        // Simulazione di window.storage per GitHub Pages
+        const storage = {
+            async get(key) {
+                const value = localStorage.getItem(key);
+                return value ? { key, value, shared: false } : null;
+            },
+            async set(key, value) {
+                localStorage.setItem(key, value);
+                return { key, value, shared: false };
+            },
+            async delete(key) {
+                localStorage.removeItem(key);
+                return { key, deleted: true, shared: false };
+            },
+            async list(prefix) {
+                const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix));
+                return { keys, prefix, shared: false };
+            }
+        };
+        window.storage = storage;
+
+        const GestioneImmobiliPadula = () => {
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [immobili, setImmobili] = useState([]);
+            const [inquilini, setInquilini] = useState([]);
+            const [pagamenti, setPagamenti] = useState([]);
+            const [spese, setSpese] = useState([]);
+            const [showModal, setShowModal] = useState(false);
+            const [modalType, setModalType] = useState('');
+            const [editingItem, setEditingItem] = useState(null);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                loadData();
+            }, []);
+
+            const loadData = async () => {
+                try {
+                    const [immobiliData, inquiliniData, pagamentiData, speseData] = await Promise.all([
+                        window.storage.get('immobili').catch(() => null),
+                        window.storage.get('inquilini').catch(() => null),
+                        window.storage.get('pagamenti').catch(() => null),
+                        window.storage.get('spese').catch(() => null)
+                    ]);
+
+                    if (immobiliData) setImmobili(JSON.parse(immobiliData.value));
+                    if (inquiliniData) setInquilini(JSON.parse(inquiliniData.value));
+                    if (pagamentiData) setPagamenti(JSON.parse(pagamentiData.value));
+                    if (speseData) setSpese(JSON.parse(speseData.value));
+                } catch (error) {
+                    console.error('Errore caricamento:', error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const saveData = async (key, data) => {
+                try {
+                    await window.storage.set(key, JSON.stringify(data));
+                } catch (error) {
+                    console.error('Errore salvataggio:', error);
+                    alert('Errore nel salvataggio dei dati');
+                }
+            };
+
+            const openModal = (type, item = null) => {
+                setModalType(type);
+                setEditingItem(item);
+                setShowModal(true);
+            };
+
+            const closeModal = () => {
+                setShowModal(false);
+                setEditingItem(null);
+            };
+
+            const handleSaveImmobile = async (formData) => {
+                const newImmobile = {
+                    id: editingItem?.id || Date.now().toString(),
+                    ...formData,
+                    createdAt: editingItem?.createdAt || new Date().toISOString()
+                };
+
+                let updatedImmobili;
+                if (editingItem) {
+                    updatedImmobili = immobili.map(i => i.id === editingItem.id ? newImmobile : i);
+                } else {
+                    updatedImmobili = [...immobili, newImmobile];
+                }
+                
+                setImmobili(updatedImmobili);
+                await saveData('immobili', updatedImmobili);
+                closeModal();
+            };
+
+            const handleSaveInquilino = async (formData) => {
+                const newInquilino = {
+                    id: editingItem?.id || Date.now().toString(),
+                    ...formData,
+                    createdAt: editingItem?.createdAt || new Date().toISOString()
+                };
+
+                let updatedInquilini;
+                if (editingItem) {
+                    updatedInquilini = inquilini.map(i => i.id === editingItem.id ? newInquilino : i);
+                } else {
+                    updatedInquilini = [...inquilini, newInquilino];
+                }
+                
+                setInquilini(updatedInquilini);
+                await saveData('inquilini', updatedInquilini);
+                closeModal();
+            };
+
+            const handleSavePagamento = async (formData) => {
+                const newPagamento = {
+                    id: editingItem?.id || Date.now().toString(),
+                    ...formData,
+                    createdAt: editingItem?.createdAt || new Date().toISOString()
+                };
+
+                let updatedPagamenti;
+                if (editingItem) {
+                    updatedPagamenti = pagamenti.map(p => p.id === editingItem.id ? newPagamento : p);
+                } else {
+                    updatedPagamenti = [...pagamenti, newPagamento];
+                }
+                
+                setPagamenti(updatedPagamenti);
+                await saveData('pagamenti', updatedPagamenti);
+                closeModal();
+            };
+
+            const handleSaveSpesa = async (formData) => {
+                const newSpesa = {
+                    id: editingItem?.id || Date.now().toString(),
+                    ...formData,
+                    createdAt: editingItem?.createdAt || new Date().toISOString()
+                };
+
+                let updatedSpese;
+                if (editingItem) {
+                    updatedSpese = spese.map(s => s.id === editingItem.id ? newSpesa : s);
+                } else {
+                    updatedSpese = [...spese, newSpesa];
+                }
+                
+                setSpese(updatedSpese);
+                await saveData('spese', updatedSpese);
+                closeModal();
+            };
+
+            const deleteItem = async (type, id) => {
+                if (!confirm('Sei sicuro di voler eliminare questo elemento?')) return;
+
+                if (type === 'immobile') {
+                    const updated = immobili.filter(i => i.id !== id);
+                    setImmobili(updated);
+                    await saveData('immobili', updated);
+                } else if (type === 'inquilino') {
+                    const updated = inquilini.filter(i => i.id !== id);
+                    setInquilini(updated);
+                    await saveData('inquilini', updated);
+                } else if (type === 'pagamento') {
+                    const updated = pagamenti.filter(p => p.id !== id);
+                    setPagamenti(updated);
+                    await saveData('pagamenti', updated);
+                } else if (type === 'spesa') {
+                    const updated = spese.filter(s => s.id !== id);
+                    setSpese(updated);
+                    await saveData('spese', updated);
+                }
+            };
+
+            const today = new Date();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+
+            const totaleAffittiMese = pagamenti
+                .filter(p => {
+                    const date = new Date(p.meseAnno);
+                    return date.getMonth() === currentMonth && date.getFullYear() === currentYear && p.stato === 'Pagato';
+                })
+                .reduce((sum, p) => sum + parseFloat(p.importoIncassato || 0), 0);
+
+            const totaleSpeseM ese = spese
+                .filter(s => {
+                    const date = new Date(s.dataSpesa);
+                    return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+                })
+                .reduce((sum, s) => sum + parseFloat(s.importo || 0), 0);
+
+            const guadagnoNetto = totaleAffittiMese - totaleSpeseM ese;
+            const immobiliAffittati = immobili.filter(i => i.stato === 'Affittato').length;
+            const immobiliLiberi = immobili.filter(i => i.stato === 'Libero').length;
+            const pagamentiInRitardo = pagamenti.filter(p => p.stato === 'In ritardo').length;
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                            <p className="text-gray-600">Caricamento...</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    <header className="bg-blue-600 text-white p-4 shadow-lg">
+                        <h1 className="text-2xl font-bold">🏠 Gestione Immobili Padula</h1>
+                    </header>
+
+                    <nav className="bg-white shadow-md sticky top-0 z-10">
+                        <div className="flex overflow-x-auto">
+                            {[
+                                { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+                                { id: 'immobili', label: 'Immobili', icon: '🏠' },
+                                { id: 'inquilini', label: 'Inquilini', icon: '👥' },
+                                { id: 'pagamenti', label: 'Pagamenti', icon: '💰' },
+                                { id: 'spese', label: 'Spese', icon: '💸' }
+                            ].map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`flex items-center gap-2 px-4 py-3 whitespace-nowrap ${
+                                        activeTab === tab.id ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'
+                                    }`}
+                                >
+                                    <span>{tab.icon}</span>
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+                    </nav>
+
+                    <main className="p-4 max-w-7xl mx-auto">
+                        {activeTab === 'dashboard' && (
+                            <Dashboard
+                                totaleAffittiMese={totaleAffittiMese}
+                                totaleSpeseM ese={totaleSpeseM ese}
+                                guadagnoNetto={guadagnoNetto}
+                                immobiliAffittati={immobiliAffittati}
+                                immobiliLiberi={immobiliLiberi}
+                                pagamentiInRitardo={pagamentiInRitardo}
+                                immobili={immobili}
+                            />
+                        )}
+
+                        {activeTab === 'immobili' && (
+                            <ListaGenerica
+                                titolo="🏠 Immobili"
+                                items={immobili}
+                                onAdd={() => openModal('immobile')}
+                                onEdit={(item) => openModal('immobile', item)}
+                                onDelete={(id) => deleteItem('immobile', id)}
+                                type="immobile"
+                            />
+                        )}
+
+                        {activeTab === 'inquilini' && (
+                            <ListaGenerica
+                                titolo="👥 Inquilini"
+                                items={inquilini}
+                                onAdd={() => openModal('inquilino')}
+                                onEdit={(item) => openModal('inquilino', item)}
+                                onDelete={(id) => deleteItem('inquilino', id)}
+                                type="inquilino"
+                            />
+                        )}
+
+                        {activeTab === 'pagamenti' && (
+                            <ListaGenerica
+                                titolo="💰 Pagamenti Affitti"
+                                items={pagamenti}
+                                onAdd={() => openModal('pagamento')}
+                                onEdit={(item) => openModal('pagamento', item)}
+                                onDelete={(id) => deleteItem('pagamento', id)}
+                                type="pagamento"
+                            />
+                        )}
+
+                        {activeTab === 'spese' && (
+                            <ListaGenerica
+                                titolo="💸 Spese"
+                                items={spese}
+                                totalSpese={spese.reduce((sum, s) => sum + parseFloat(s.importo || 0), 0)}
+                                onAdd={() => openModal('spesa')}
+                                onEdit={(item) => openModal('spesa', item)}
+                                onDelete={(id) => deleteItem('spesa', id)}
+                                type="spesa"
+                            />
+                        )}
+                    </main>
+
+                    {showModal && (
+                        <Modal
+                            type={modalType}
+                            item={editingItem}
+                            immobili={immobili}
+                            inquilini={inquilini}
+                            onClose={closeModal}
+                            onSave={(data) => {
+                                if (modalType === 'immobile') handleSaveImmobile(data);
+                                else if (modalType === 'inquilino') handleSaveInquilino(data);
+                                else if (modalType === 'pagamento') handleSavePagamento(data);
+                                else if (modalType === 'spesa') handleSaveSpesa(data);
+                            }}
+                        />
+                    )}
+                </div>
+            );
+        };
+
+        const Dashboard = ({ totaleAffittiMese, totaleSpeseM ese, guadagnoNetto, immobiliAffittati, immobiliLiberi, pagamentiInRitardo, immobili }) => {
+            return (
+                <div className="space-y-6">
+                    <h2 className="text-2xl font-bold text-gray-800">📊 Dashboard</h2>
+
+                    {pagamentiInRitardo > 0 && (
+                        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                            <div className="flex items-center gap-2">
+                                <span className="text-2xl">⚠️</span>
+                                <div>
+                                    <p className="font-semibold text-red-800">Attenzione!</p>
+                                    <p className="text-red-700">{pagamentiInRitardo} pagamento{pagamentiInRitardo > 1 ? 'i' : ''} in ritardo</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <p className="text-sm text-gray-600 mb-2">Affitti Mese</p>
+                            <p className="text-2xl font-bold text-green-600">€{totaleAffittiMese.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <p className="text-sm text-gray-600 mb-2">Spese Mese</p>
+                            <p className="text-2xl font-bold text-red-600">€{totaleSpeseM ese.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <p className="text-sm text-gray-600 mb-2">Guadagno Netto</p>
+                            <p className={`text-2xl font-bold ${guadagnoNetto >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                                €{guadagnoNetto.toFixed(2)}
+                            </p>
+                        </div>
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <p className="text-sm text-gray-600 mb-2">Immobili</p>
+                            <p className="text-2xl font-bold text-purple-600">{immobiliAffittati} / {immobili.length}</p>
+                            <p className="text-sm text-gray-500 mt-1">{immobiliLiberi} liberi</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 className="text-xl font-semibold text-gray-800 mb-4">I Tuoi Immobili</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {immobili.map(immobile => {
+                                const tipoColor = immobile.tipo === 'Appartamento' ? 'bg-blue-500' :
+                                                immobile.tipo === 'Garage' ? 'bg-gray-500' : 'bg-orange-500';
+                                const statoConfig = immobile.stato === 'Affittato' ? { emoji: '🟢', bg: 'bg-green-50', text: 'text-green-700' } :
+                                                   immobile.stato === 'Libero' ? { emoji: '🔴', bg: 'bg-red-50', text: 'text-red-700' } :
+                                                   { emoji: '🟠', bg: 'bg-orange-50', text: 'text-orange-700' };
+                                
+                                return (
+                                    <div key={immobile.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+                                        <div className={`h-2 ${tipoColor}`}></div>
+                                        <div className="p-4">
+                                            <div className="flex items-start justify-between mb-2">
+                                                <h4 className="font-semibold text-gray-800 flex-1">{immobile.nome}</h4>
+                                                <span className={`${statoConfig.bg} ${statoConfig.text} px-2 py-1 rounded text-xs font-medium`}>
+                                                    {statoConfig.emoji} {immobile.stato}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-gray-600 mb-2">📍 {immobile.tipo}</p>
+                                            {immobile.inquilino && <p className="text-sm text-gray-600 mb-2">👤 {immobile.inquilino}</p>}
+                                            <p className="text-lg font-bold text-blue-600">€{parseFloat(immobile.affittoMensile || 0).toFixed(2)}/mese</p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {immobili.length === 0 && (
+                                <div className="col-span-full text-center py-12 text-gray-500">
+                                    Nessun immobile ancora. Aggiungi il primo!
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ListaGenerica = ({ titolo, items, totalSpese, onAdd, onEdit, onDelete, type }) => {
+            return (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-2xl font-bold text-gray-800">{titolo}</h2>
+                        <button
+                            onClick={onAdd}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                        >
+                            ➕ Aggiungi
+                        </button>
+                    </div>
+
+                    {type === 'spesa' && totalSpese !== undefined && (
+                        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                            <p className="text-sm text-blue-800">Totale Spese Registrate</p>
+                            <p className="text-2xl font-bold text-blue-900">€{totalSpese.toFixed(2)}</p>
+                        </div>
+                    )}
+
+                    <div className="bg-white rounded-lg shadow overflow-hidden">
+                        {items.length === 0 ? (
+                            <div className="text-center py-12 text-gray-500">
+                                Nessun elemento ancora. Clicca su "Aggiungi"!
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            {type === 'immobile' && (
+                                                <>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nome</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Tipo</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Stato</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Inquilino</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Affitto</th>
+                                                </>
+                                            )}
+                                            {type === 'inquilino' && (
+                                                <>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nome</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Immobile</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Telefono</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                                                </>
+                                            )}
+                                            {type === 'pagamento' && (
+                                                <>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Immobile</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Mese</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Previsto</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Incassato</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Stato</th>
+                                                </>
+                                            )}
+                                            {type === 'spesa' && (
+                                                <>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Data</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Immobile</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Categoria</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Descrizione</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Importo</th>
+                                                </>
+                                            )}
+                                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Azioni</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        {items.map(item => (
+                                            <tr key={item.id} className="hover:bg-gray-50">
+                                                {type === 'immobile' && (
+                                                    <>
+                                                        <td className="px-4 py-3 text-sm text-gray-800">{item.nome}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-600">{item.tipo}</td>
+                                                        <td className="px-4 py-3">
+                                                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                                                item.stato === 'Affittato' ? 'bg-green-100 text-green-700' :
+                                                                item.stato === 'Libero' ? 'bg-red-100 text-red-700' :
+                                                                'bg-orange-100 text-orange-700'
+                                                            }`}>{item.stato}</span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm text-gray-600">{item.inquilino || '-'}</td>
+                                                        <td className="px-4 py-3 text-sm font-semibold">€{parseFloat(item.affittoMensile || 0).toFixed(2)}</td>
+                                                    </>
+                                                )}
+                                                {type === 'inquilino' && (
+                                                    <>
+                                                        <td className="px-4 py-3 text-sm text-gray-800">{item.nome}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-600">{item.immobile || '-'}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-600">{item.telefono || '-'}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-600">{item.email || '-'}</td>
+                                                    </>
+                                                )}
+                                                {type === 'pagamento' && (
+                                                    <>
+                                                        <td className="px-4 py-3 text-sm text-gray-800">{item.immobile}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-600">
+                                                            {new Date(item.meseAnno).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm">€{parseFloat(item.importoPrevisto || 0).toFixed(2)}</td>
+                                                        <td className="px-4 py-3 text-sm">€{parseFloat(item.importoIncassato || 0).toFixed(2)}</td>
+                                                        <td className="px-4 py-3">
+                                                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                                                item.stato === 'Pagato' ? 'bg-green-100 text-green-700' :
+                                                                item.stato === 'In ritardo' ? 'bg-red-100 text-red-700' :
+                                                                'bg-yellow-100 text-yellow-700'
+                                                            }`}>{item.stato}</span>
+                                                        </td>
+                                                    </>
+                                                )}
+                                                {type === 'spesa' && (
+                                                    <>
+                                                        <td className="px-4 py-3 text-sm">{new Date(item.dataSpesa).toLocaleDateString('it-IT')}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-600">{item.immobile}</td>
+                                                        <td className="px-4 py-3">
+                                                            <span className="px-2 py-1 bg-gray-100 rounded text-xs">{item.categoria}</span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm text-gray-600">{item.descrizione}</td>
+                                                        <td className="px-4 py-3 text-sm font-semibold text-red-600">€{parseFloat(item.importo || 0).toFixed(2)}</td>
+                                                    </>
+                                                )}
+                                                <td className="px-4 py-3">
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => onEdit(item)} className="text-blue-600 hover:text-blue-800">✏️</button>
+                                                        <button onClick={() => onDelete(item.id)} className="text-red-600 hover:text-red-800">🗑️</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const Modal = ({ type, item, immobili, inquilini, onClose, onSave }) => {
+            const [formData, setFormData] = useState(item || {});
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onSave(formData);
+            };
+
+            const handleChange = (field, value) => {
+                setFormData(prev => ({ ...prev, [field]: value }));
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+                            <h3 className="text-xl font-bold text-gray-800">
+                                {item ? 'Modifica' : 'Aggiungi'} {
+                                    type === 'immobile' ? 'Immobile' : 
+                                    type === 'inquilino' ? 'Inquilino' : 
+                                    type === 'pagamento' ? 'Pagamento' : 'Spesa'
+                                }
+                            </h3>
+                            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">✖</button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                            {type === 'immobile' && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome Immobile *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={formData.nome || ''}
+                                            onChange={(e) => handleChange('nome', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="es. Via Marconi 12 - Appartamento"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
+                                        <select
+                                            required
+                                            value={formData.tipo || ''}
+                                            onChange={(e) => handleChange('tipo', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                        >
+                                            <option value="">Seleziona tipo</option>
+                                            <option value="Appartamento">Appartamento</option>
+                                            <option value="Garage">Garage</option>
+                                            <option value="Stanza">Stanza</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Stato *</label>
+                                        <select
+                                            required
+                                            value={formData.stato || ''}
+                                            onChange={(e) => handleChange('stato', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                        >
+                                            <option value="">Seleziona stato</option>
+                                            <option value="Affittato">🟢 Affittato</option>
+                                            <option value="Libero">🔴 Libero</option>
+                                            <option value="In manutenzione">🟠 In manutenzione</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Inquilino</label>
+                                        <input
+                                            type="text"
+                                            value={formData.inquilino || ''}
+                                            onChange={(e) => handleChange('inquilino', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="Nome inquilino"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Affitto Mensile (€) *</label>
+                                        <input
+                                            type="number"
+                                            required
+                                            step="0.01"
+                                            value={formData.affittoMensile || ''}
+                                            onChange={(e) => handleChange('affittoMensile', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="500.00"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Data Inizio</label>
+                                            <input
+                                                type="date"
+                                                value={formData.dataInizio || ''}
+                                                onChange={(e) => handleChange('dataInizio', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Data Fine</label>
+                                            <input
+                                                type="date"
+                                                value={formData.dataFine || ''}
+                                                onChange={(e) => handleChange('dataFine', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
+                                        <textarea
+                                            value={formData.note || ''}
+                                            onChange={(e) => handleChange('note', e.target.value)}
+                                            rows="3"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="Descrizione..."
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            {type === 'inquilino' && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome e Cognome *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={formData.nome || ''}
+                                            onChange={(e) => handleChange('nome', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="Mario Rossi"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Immobile</label>
+                                        <input
+                                            type="text"
+                                            value={formData.immobile || ''}
+                                            onChange={(e) => handleChange('immobile', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="Nome immobile"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
+                                        <input
+                                            type="tel"
+                                            value={formData.telefono || ''}
+                                            onChange={(e) => handleChange('telefono', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="+39 123 456 7890"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                        <input
+                                            type="email"
+                                            value={formData.email || ''}
+                                            onChange={(e) => handleChange('email', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="email@example.com"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Data Inizio</label>
+                                            <input
+                                                type="date"
+                                                value={formData.dataInizio || ''}
+                                                onChange={(e) => handleChange('dataInizio', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Data Fine</label>
+                                            <input
+                                                type="date"
+                                                value={formData.dataFine || ''}
+                                                onChange={(e) => handleChange('dataFine', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
+                                        <textarea
+                                            value={formData.note || ''}
+                                            onChange={(e) => handleChange('note', e.target.value)}
+                                            rows="3"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="Note varie..."
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            {type === 'pagamento' && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Immobile *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={formData.immobile || ''}
+                                            onChange={(e) => handleChange('immobile', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="Nome immobile"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Inquilino</label>
+                                        <input
+                                            type="text"
+                                            value={formData.inquilino || ''}
+                                            onChange={(e) => handleChange('inquilino', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="Nome inquilino"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Mese/Anno *</label>
+                                        <input
+                                            type="month"
+                                            required
+                                            value={formData.meseAnno || ''}
+                                            onChange={(e) => handleChange('meseAnno', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Importo Previsto (€) *</label>
+                                            <input
+                                                type="number"
+                                                required
+                                                step="0.01"
+                                                value={formData.importoPrevisto || ''}
+                                                onChange={(e) => handleChange('importoPrevisto', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Importo Incassato (€)</label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                value={formData.importoIncassato || ''}
+                                                onChange={(e) => handleChange('importoIncassato', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Data Incasso</label>
+                                        <input
+                                            type="date"
+                                            value={formData.dataIncasso || ''}
+                                            onChange={(e) => handleChange('dataIncasso', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Stato *</label>
+                                        <select
+                                            required
+                                            value={formData.stato || ''}
+                                            onChange={(e) => handleChange('stato', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                        >
+                                            <option value="">Seleziona stato</option>
+                                            <option value="Pagato">✅ Pagato</option>
+                                            <option value="In ritardo">🔴 In ritardo</option>
+                                            <option value="Mancante">⚠️ Mancante</option>
+                                        </select>
+                                    </div>
+                                </>
+                            )}
+
+                            {type === 'spesa' && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Immobile *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={formData.immobile || ''}
+                                            onChange={(e) => handleChange('immobile', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="Nome immobile"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Data Spesa *</label>
+                                        <input
+                                            type="date"
+                                            required
+                                            value={formData.dataSpesa || ''}
+                                            onChange={(e) => handleChange('dataSpesa', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Categoria *</label>
+                                        <select
+                                            required
+                                            value={formData.categoria || ''}
+                                            onChange={(e) => handleChange('categoria', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                        >
+                                            <option value="">Seleziona</option>
+                                            <option value="Manutenzione">🔧 Manutenzione</option>
+                                            <option value="Pulizia">🧹 Pulizia</option>
+                                            <option value="Tasse">📋 Tasse</option>
+                                            <option value="Condominio">🏢 Condominio</option>
+                                            <option value="Altro">📦 Altro</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Importo (€) *</label>
+                                        <input
+                                            type="number"
+                                            required
+                                            step="0.01"
+                                            value={formData.importo || ''}
+                                            onChange={(e) => handleChange('importo', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="150.00"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione *</label>
+                                        <textarea
+                                            required
+                                            value={formData.descrizione || ''}
+                                            onChange={(e) => handleChange('descrizione', e.target.value)}
+                                            rows="3"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="Descrizione della spesa..."
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                                >
+                                    Annulla
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                >
+                                    💾 Salva
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<GestioneImmobiliPadula />, document.getElementById('root'));
+    </script>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
