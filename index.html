@@ -4,10 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Immobili Padula</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React e ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Lucide PRIMA del codice React che lo usa -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2563eb">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -23,7 +28,6 @@
 
     <script type="text/babel">
         const { useState, useEffect } = React;
-        const { Home, Users, CreditCard, Receipt, BarChart3, Plus, X, Edit2, Save, AlertCircle, Calendar, Euro } = lucide;
 
         // Simulazione di window.storage per GitHub Pages
         const storage = {
@@ -205,19 +209,21 @@
 
             const totaleAffittiMese = pagamenti
                 .filter(p => {
-                    const date = new Date(p.meseAnno);
+                    if (!p.meseAnno) return false;
+                    const date = new Date(p.meseAnno + '-01');
                     return date.getMonth() === currentMonth && date.getFullYear() === currentYear && p.stato === 'Pagato';
                 })
                 .reduce((sum, p) => sum + parseFloat(p.importoIncassato || 0), 0);
 
-            const totaleSpeseM ese = spese
+            const totaleSpeseMese = spese
                 .filter(s => {
+                    if (!s.dataSpesa) return false;
                     const date = new Date(s.dataSpesa);
                     return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
                 })
                 .reduce((sum, s) => sum + parseFloat(s.importo || 0), 0);
 
-            const guadagnoNetto = totaleAffittiMese - totaleSpeseM ese;
+            const guadagnoNetto = totaleAffittiMese - totaleSpeseMese;
             const immobiliAffittati = immobili.filter(i => i.stato === 'Affittato').length;
             const immobiliLiberi = immobili.filter(i => i.stato === 'Libero').length;
             const pagamentiInRitardo = pagamenti.filter(p => p.stato === 'In ritardo').length;
@@ -266,7 +272,7 @@
                         {activeTab === 'dashboard' && (
                             <Dashboard
                                 totaleAffittiMese={totaleAffittiMese}
-                                totaleSpeseM ese={totaleSpeseM ese}
+                                totaleSpeseMese={totaleSpeseMese}
                                 guadagnoNetto={guadagnoNetto}
                                 immobiliAffittati={immobiliAffittati}
                                 immobiliLiberi={immobiliLiberi}
@@ -340,7 +346,7 @@
             );
         };
 
-        const Dashboard = ({ totaleAffittiMese, totaleSpeseM ese, guadagnoNetto, immobiliAffittati, immobiliLiberi, pagamentiInRitardo, immobili }) => {
+        const Dashboard = ({ totaleAffittiMese, totaleSpeseMese, guadagnoNetto, immobiliAffittati, immobiliLiberi, pagamentiInRitardo, immobili }) => {
             return (
                 <div className="space-y-6">
                     <h2 className="text-2xl font-bold text-gray-800">📊 Dashboard</h2>
@@ -364,7 +370,7 @@
                         </div>
                         <div className="bg-white rounded-lg shadow p-6">
                             <p className="text-sm text-gray-600 mb-2">Spese Mese</p>
-                            <p className="text-2xl font-bold text-red-600">€{totaleSpeseM ese.toFixed(2)}</p>
+                            <p className="text-2xl font-bold text-red-600">€{totaleSpeseMese.toFixed(2)}</p>
                         </div>
                         <div className="bg-white rounded-lg shadow p-6">
                             <p className="text-sm text-gray-600 mb-2">Guadagno Netto</p>
@@ -515,420 +521,10 @@
                                                     <>
                                                         <td className="px-4 py-3 text-sm text-gray-800">{item.immobile}</td>
                                                         <td className="px-4 py-3 text-sm text-gray-600">
-                                                            {new Date(item.meseAnno).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}
+                                                            {item.meseAnno ? new Date(item.meseAnno + '-01').toLocaleDateString('it-IT', { month: 'long', year: 'numeric' }) : '-'}
                                                         </td>
                                                         <td className="px-4 py-3 text-sm">€{parseFloat(item.importoPrevisto || 0).toFixed(2)}</td>
                                                         <td className="px-4 py-3 text-sm">€{parseFloat(item.importoIncassato || 0).toFixed(2)}</td>
                                                         <td className="px-4 py-3">
                                                             <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                                                item.stato === 'Pagato' ? 'bg-green-100 text-green-700' :
-                                                                item.stato === 'In ritardo' ? 'bg-red-100 text-red-700' :
-                                                                'bg-yellow-100 text-yellow-700'
-                                                            }`}>{item.stato}</span>
-                                                        </td>
-                                                    </>
-                                                )}
-                                                {type === 'spesa' && (
-                                                    <>
-                                                        <td className="px-4 py-3 text-sm">{new Date(item.dataSpesa).toLocaleDateString('it-IT')}</td>
-                                                        <td className="px-4 py-3 text-sm text-gray-600">{item.immobile}</td>
-                                                        <td className="px-4 py-3">
-                                                            <span className="px-2 py-1 bg-gray-100 rounded text-xs">{item.categoria}</span>
-                                                        </td>
-                                                        <td className="px-4 py-3 text-sm text-gray-600">{item.descrizione}</td>
-                                                        <td className="px-4 py-3 text-sm font-semibold text-red-600">€{parseFloat(item.importo || 0).toFixed(2)}</td>
-                                                    </>
-                                                )}
-                                                <td className="px-4 py-3">
-                                                    <div className="flex gap-2">
-                                                        <button onClick={() => onEdit(item)} className="text-blue-600 hover:text-blue-800">✏️</button>
-                                                        <button onClick={() => onDelete(item.id)} className="text-red-600 hover:text-red-800">🗑️</button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        };
-
-        const Modal = ({ type, item, immobili, inquilini, onClose, onSave }) => {
-            const [formData, setFormData] = useState(item || {});
-
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                onSave(formData);
-            };
-
-            const handleChange = (field, value) => {
-                setFormData(prev => ({ ...prev, [field]: value }));
-            };
-
-            return (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-                            <h3 className="text-xl font-bold text-gray-800">
-                                {item ? 'Modifica' : 'Aggiungi'} {
-                                    type === 'immobile' ? 'Immobile' : 
-                                    type === 'inquilino' ? 'Inquilino' : 
-                                    type === 'pagamento' ? 'Pagamento' : 'Spesa'
-                                }
-                            </h3>
-                            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">✖</button>
-                        </div>
-
-                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                            {type === 'immobile' && (
-                                <>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome Immobile *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={formData.nome || ''}
-                                            onChange={(e) => handleChange('nome', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            placeholder="es. Via Marconi 12 - Appartamento"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
-                                        <select
-                                            required
-                                            value={formData.tipo || ''}
-                                            onChange={(e) => handleChange('tipo', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                        >
-                                            <option value="">Seleziona tipo</option>
-                                            <option value="Appartamento">Appartamento</option>
-                                            <option value="Garage">Garage</option>
-                                            <option value="Stanza">Stanza</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Stato *</label>
-                                        <select
-                                            required
-                                            value={formData.stato || ''}
-                                            onChange={(e) => handleChange('stato', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                        >
-                                            <option value="">Seleziona stato</option>
-                                            <option value="Affittato">🟢 Affittato</option>
-                                            <option value="Libero">🔴 Libero</option>
-                                            <option value="In manutenzione">🟠 In manutenzione</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Inquilino</label>
-                                        <input
-                                            type="text"
-                                            value={formData.inquilino || ''}
-                                            onChange={(e) => handleChange('inquilino', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            placeholder="Nome inquilino"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Affitto Mensile (€) *</label>
-                                        <input
-                                            type="number"
-                                            required
-                                            step="0.01"
-                                            value={formData.affittoMensile || ''}
-                                            onChange={(e) => handleChange('affittoMensile', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            placeholder="500.00"
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Data Inizio</label>
-                                            <input
-                                                type="date"
-                                                value={formData.dataInizio || ''}
-                                                onChange={(e) => handleChange('dataInizio', e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Data Fine</label>
-                                            <input
-                                                type="date"
-                                                value={formData.dataFine || ''}
-                                                onChange={(e) => handleChange('dataFine', e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
-                                        <textarea
-                                            value={formData.note || ''}
-                                            onChange={(e) => handleChange('note', e.target.value)}
-                                            rows="3"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            placeholder="Descrizione..."
-                                        />
-                                    </div>
-                                </>
-                            )}
-
-                            {type === 'inquilino' && (
-                                <>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome e Cognome *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={formData.nome || ''}
-                                            onChange={(e) => handleChange('nome', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            placeholder="Mario Rossi"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Immobile</label>
-                                        <input
-                                            type="text"
-                                            value={formData.immobile || ''}
-                                            onChange={(e) => handleChange('immobile', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            placeholder="Nome immobile"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
-                                        <input
-                                            type="tel"
-                                            value={formData.telefono || ''}
-                                            onChange={(e) => handleChange('telefono', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            placeholder="+39 123 456 7890"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                        <input
-                                            type="email"
-                                            value={formData.email || ''}
-                                            onChange={(e) => handleChange('email', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            placeholder="email@example.com"
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Data Inizio</label>
-                                            <input
-                                                type="date"
-                                                value={formData.dataInizio || ''}
-                                                onChange={(e) => handleChange('dataInizio', e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Data Fine</label>
-                                            <input
-                                                type="date"
-                                                value={formData.dataFine || ''}
-                                                onChange={(e) => handleChange('dataFine', e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
-                                        <textarea
-                                            value={formData.note || ''}
-                                            onChange={(e) => handleChange('note', e.target.value)}
-                                            rows="3"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            placeholder="Note varie..."
-                                        />
-                                    </div>
-                                </>
-                            )}
-
-                            {type === 'pagamento' && (
-                                <>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Immobile *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={formData.immobile || ''}
-                                            onChange={(e) => handleChange('immobile', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            placeholder="Nome immobile"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Inquilino</label>
-                                        <input
-                                            type="text"
-                                            value={formData.inquilino || ''}
-                                            onChange={(e) => handleChange('inquilino', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            placeholder="Nome inquilino"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Mese/Anno *</label>
-                                        <input
-                                            type="month"
-                                            required
-                                            value={formData.meseAnno || ''}
-                                            onChange={(e) => handleChange('meseAnno', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Importo Previsto (€) *</label>
-                                            <input
-                                                type="number"
-                                                required
-                                                step="0.01"
-                                                value={formData.importoPrevisto || ''}
-                                                onChange={(e) => handleChange('importoPrevisto', e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Importo Incassato (€)</label>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                value={formData.importoIncassato || ''}
-                                                onChange={(e) => handleChange('importoIncassato', e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Data Incasso</label>
-                                        <input
-                                            type="date"
-                                            value={formData.dataIncasso || ''}
-                                            onChange={(e) => handleChange('dataIncasso', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Stato *</label>
-                                        <select
-                                            required
-                                            value={formData.stato || ''}
-                                            onChange={(e) => handleChange('stato', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                        >
-                                            <option value="">Seleziona stato</option>
-                                            <option value="Pagato">✅ Pagato</option>
-                                            <option value="In ritardo">🔴 In ritardo</option>
-                                            <option value="Mancante">⚠️ Mancante</option>
-                                        </select>
-                                    </div>
-                                </>
-                            )}
-
-                            {type === 'spesa' && (
-                                <>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Immobile *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={formData.immobile || ''}
-                                            onChange={(e) => handleChange('immobile', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            placeholder="Nome immobile"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Data Spesa *</label>
-                                        <input
-                                            type="date"
-                                            required
-                                            value={formData.dataSpesa || ''}
-                                            onChange={(e) => handleChange('dataSpesa', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Categoria *</label>
-                                        <select
-                                            required
-                                            value={formData.categoria || ''}
-                                            onChange={(e) => handleChange('categoria', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                        >
-                                            <option value="">Seleziona</option>
-                                            <option value="Manutenzione">🔧 Manutenzione</option>
-                                            <option value="Pulizia">🧹 Pulizia</option>
-                                            <option value="Tasse">📋 Tasse</option>
-                                            <option value="Condominio">🏢 Condominio</option>
-                                            <option value="Altro">📦 Altro</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Importo (€) *</label>
-                                        <input
-                                            type="number"
-                                            required
-                                            step="0.01"
-                                            value={formData.importo || ''}
-                                            onChange={(e) => handleChange('importo', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            placeholder="150.00"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione *</label>
-                                        <textarea
-                                            required
-                                            value={formData.descrizione || ''}
-                                            onChange={(e) => handleChange('descrizione', e.target.value)}
-                                            rows="3"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            placeholder="Descrizione della spesa..."
-                                        />
-                                    </div>
-                                </>
-                            )}
-
-                            <div className="flex gap-3 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={onClose}
-                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                                >
-                                    Annulla
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                                >
-                                    💾 Salva
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            );
-        };
-
-        ReactDOM.render(<GestioneImmobiliPadula />, document.getElementById('root'));
-    </script>
-
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <script>
-        lucide.createIcons();
-    </script>
-</body>
-</html>
+                                                                item.sta
